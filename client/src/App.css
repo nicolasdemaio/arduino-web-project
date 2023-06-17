@@ -9,8 +9,9 @@
       transform: scale(1);
     }
   }
-.container {
-    display: flex;
+
+  body {
+    background-color: #f0f2f5;
   }
   
   .heartRateGraphic {
@@ -19,7 +20,7 @@
     height: 600px;
   }
   
-  .app {
+  .App {
     /* Estilos adicionales para el primer div */
     font-size: 24px;
   }
@@ -32,14 +33,13 @@
 
   .corazon {
     animation: latido 2s infinite;
-    font-size: 100px;
-    margin-right: 10px;
+    font-size: 2rem;
+    margin-right: 0px;
   }
   
   .numero {
-    font-size: 100px;
     font-weight: bold;
-    display: inline-block;
+    font-size: 2rem;
     color: black;
   }
   

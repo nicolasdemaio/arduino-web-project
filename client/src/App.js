@@ -32,20 +32,26 @@ const data = {
 };
 
 function App() {
+  const [socket, setSocket] = useState(null);
   const [randomNumber, setRandomNumber] = useState(null);
-  const socket = io("http://localhost:3001");
+  const [pulso, setPulso] = useState(null);
 
   useEffect(() => {
-    socket.on("randomNumber", (data2) => {
-      setRandomNumber(data2);
-      console.log(data.datasets[0].data[0])
-    });
+    if (socket) {
+      socket.on("randomNumber", (data2) => {
+        setRandomNumber(data2);
+        console.log(data2);
+        // Espera 1 seg, para que los graficos no sean rectos y sean diagonales??
+        setTimeout(() => {
+          setPulso(data2);
+        }, "1000");
+      });
 
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
-
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, [socket]);
   const generarNumeroAleatorio = () => {
     return randomNumber;
   };
@@ -63,16 +69,19 @@ function App() {
           distribution: "linear",
           realtime: {
             onRefresh: function (chart) {
-              chart.data.datasets[0].data.push({
-                x: moment(),
-                y: generarNumeroAleatorio(),
-              });
+              if (socket) {
+                chart.data.datasets[0].data.push({
+                  x: moment(),
+                  y: generarNumeroAleatorio(),
+                });
+              }
             },
-            delay: 0,
-            refresh: 0,
+            delay: 1000,
+            refresh: 1000,
             time: {
               displayFormat: "h:mm",
             },
+            pause: !socket,
           },
           ticks: {
             displayFormats: 1,
@@ -84,7 +93,7 @@ function App() {
             source: "auto",
             autoSkip: true,
             callback: function (value) {
-              return moment(value, "HH:mm:ss").format("HH:mm:ss");
+              return moment(value, "HH:mm:ss").format("H:mm:ss");
             },
           },
         },
@@ -97,24 +106,77 @@ function App() {
           },
         },
       ],
+      
+    },
+    legend: {
+      display: false, // Oculta la leyenda
     },
   };
+
+  const connectWebSocket = () => {
+    const newSocket = io("http://localhost:3001");
+    setSocket(newSocket);
+  };
+
+  const disconnectWebSocket = () => {
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
+    }
+  };
+
   return (
-    <div className="container App">
-      <div className="heartRateGraphic">
-        <Line data={data} options={options} />
+    <>
+      <nav class="navbar bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+          <span style={{color:'white'}}>ReactCardio</span>
+        </a>
       </div>
-      <div className="div2">
-        <div className="corazon">
-          <span role="img" aria-label="Corazón latiendo">
-            💓
-          </span>
+      </nav>
+    <div className="container App mt-4">
+      <h1 className="fw-bold">Sensor de ritmo cardiaco</h1>
+      <div className="row">
+        <div className="card p-3 col-12">
+          <div className="heartRateGraphic">
+            <Line data={data} options={options} />
+          </div>
         </div>
-        <div className="numero">
-          <span>{randomNumber}</span>
+        <div class="d-flex justify-content-between mt-3 align-items-center">
+          <div>
+            {socket ? (
+    
+              <button
+                className="btn btn-light shadow"
+                onClick={disconnectWebSocket}
+              >
+                Detener lectura
+              </button>
+              
+  
+            ) : (
+              <button
+                className="btn btn-primary shadow"
+                onClick={connectWebSocket}
+              >
+                Comenzar lectura
+              </button>
+            )}
+          </div>
+          <div className="d-flex align-items-center">
+          <div className="numero">
+              <span>{pulso}</span>
+            </div>
+            <div className="corazon w-25 y-25">
+              <span role="img" aria-label="Corazón latiendo">
+                💓
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+    </>
   );
 }
 
