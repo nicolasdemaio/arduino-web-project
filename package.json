@@ -1,0 +1,8 @@
+{
+  "name": "mi-repositorio",
+  "scripts": {
+    "start": "npm run start-express & npm run start-react",
+    "start-express": "cd server && npm start",
+    "start-react": "cd client && npm start"
+  }
+}

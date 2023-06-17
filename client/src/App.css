@@ -1,0 +1,45 @@
+@keyframes latido {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+.container {
+    display: flex;
+  }
+  
+  .heartRateGraphic {
+    flex: 2; /* El primer div ocupará 2 partes del espacio disponible */
+    color: white;
+    height: 600px;
+  }
+  
+  .app {
+    /* Estilos adicionales para el primer div */
+    font-size: 24px;
+  }
+  
+  .div2 {
+    flex: 1; /* El segundo div ocupará 1 parte del espacio disponible */
+    color: white;
+    height: 200px;
+  }
+
+  .corazon {
+    animation: latido 2s infinite;
+    font-size: 100px;
+    margin-right: 10px;
+  }
+  
+  .numero {
+    font-size: 100px;
+    font-weight: bold;
+    display: inline-block;
+    color: black;
+  }
+  
