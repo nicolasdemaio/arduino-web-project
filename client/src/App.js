@@ -33,18 +33,29 @@ const data = {
 
 function App() {
   const [socket, setSocket] = useState(null);
-  const [randomNumber, setRandomNumber] = useState(null);
+  const [heartRate, setHeartRate] = useState(null);
   const [pulso, setPulso] = useState(null);
+  const [readingState, setReadingState] = useState('idle');
+  const [heartRatesHistory, setHeartRatesHistory] = useState([]);
+  var maxTicksLimit = 30;
 
   useEffect(() => {
     if (socket) {
-      socket.on("randomNumber", (data2) => {
-        setRandomNumber(data2);
+      socket.on("heartRate", (data2) => {
+        setHeartRate(data2);
         console.log(data2);
+
+        heartRatesHistory.push(data2);
+        setHeartRatesHistory(heartRatesHistory);
+        console.log("history: " + heartRatesHistory)
         // Espera 1 seg, para que los graficos no sean rectos y sean diagonales??
         setTimeout(() => {
           setPulso(data2);
         }, "1000");
+        if (maxTicksLimit <= heartRatesHistory.length) {
+          setReadingState('finished')
+          disconnectWebSocket();
+        }
       });
 
       return () => {
@@ -52,8 +63,9 @@ function App() {
       };
     }
   }, [socket]);
-  const generarNumeroAleatorio = () => {
-    return randomNumber;
+
+  const heartRateValue = () => {
+    return heartRate;
   };
 
   const options = {
@@ -72,12 +84,12 @@ function App() {
               if (socket) {
                 chart.data.datasets[0].data.push({
                   x: moment(),
-                  y: generarNumeroAleatorio(),
+                  y: heartRateValue(),
                 });
               }
             },
-            delay: 1000,
-            refresh: 1000,
+            delay: 500,
+            refresh: 500,
             time: {
               displayFormat: "h:mm",
             },
@@ -101,12 +113,14 @@ function App() {
       yAxes: [
         {
           ticks: {
-            beginAtZero: true,
-            max: 200,
+            stepSize: 5,
+            beginAtZero: false,
+            min: 40,
+            max: 180,
           },
         },
       ],
-      
+
     },
     legend: {
       display: false, // Oculta la leyenda
@@ -114,6 +128,8 @@ function App() {
   };
 
   const connectWebSocket = () => {
+    setHeartRate([]);
+    setReadingState('running');
     const newSocket = io("http://localhost:3001");
     setSocket(newSocket);
   };
@@ -125,57 +141,91 @@ function App() {
     }
   };
 
+  const restartProgram = () => {
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
+    }
+    setReadingState('idle')
+    disconnectWebSocket();
+    setHeartRatesHistory([]);
+    setHeartRate(null);
+    setPulso(null);
+  };
+
+  const showFinalReport = () => {
+    if (readingState === 'finished') {
+      return <div>
+        <div class='row'>Pico mínimo: {heartRatesHistory.reduce((min, current) => Math.min(min, current))}</div>
+        <div class='row'>Pico máximo: {heartRatesHistory.reduce((min, current) => Math.max(min, current))}</div>
+        <div class='row'>Promedio: {heartRatesHistory.reduce((acc, curr) => acc + curr, 0) / heartRatesHistory.length}</div>
+      </div>
+    }
+  };
+
+  const renderButton = () => {
+    if (socket && readingState === 'running') {
+      return <button
+        disabled={readingState === 'running'}
+        className="btn btn-secondary"
+        onClick={disconnectWebSocket}
+      >
+        ({maxTicksLimit - heartRatesHistory.length}) Leyendo ...
+      </button>;
+    } else if (readingState === 'finished') {
+      return <button
+        className="btn btn-dark shadow"
+        onClick={restartProgram}
+      >
+        Reiniciar
+      </button>;
+    } else {
+      return <button
+        className="btn btn-primary shadow"
+        onClick={connectWebSocket}
+      >
+        Comenzar lectura
+      </button>;
+    }
+  };
+
   return (
     <>
       <nav class="navbar bg-dark">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="#">
-          <span style={{color:'white'}}>ReactCardio</span>
-        </a>
-      </div>
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">
+            <span style={{ color: 'white' }}>ReactCardio</span>
+          </a>
+        </div>
       </nav>
-    <div className="container App mt-4">
-      <h1 className="fw-bold">Sensor de ritmo cardiaco</h1>
-      <div className="row">
-        <div className="card p-3 col-12">
-          <div className="heartRateGraphic">
-            <Line data={data} options={options} />
-          </div>
-        </div>
-        <div class="d-flex justify-content-between mt-3 align-items-center">
-          <div>
-            {socket ? (
-    
-              <button
-                className="btn btn-light shadow"
-                onClick={disconnectWebSocket}
-              >
-                Detener lectura
-              </button>
-              
-  
-            ) : (
-              <button
-                className="btn btn-primary shadow"
-                onClick={connectWebSocket}
-              >
-                Comenzar lectura
-              </button>
-            )}
-          </div>
-          <div className="d-flex align-items-center">
-          <div className="numero">
-              <span>{pulso}</span>
-            </div>
-            <div className="corazon w-25 y-25">
-              <span role="img" aria-label="Corazón latiendo">
-                💓
-              </span>
+      <div className="container App mt-4 w-75">
+        <h1 className="fw-bold">Sensor de ritmo cardiaco</h1>
+        <div className="row">
+          <div className="card p-3 col-12">
+            <div className="heartRateGraphic">
+              <Line data={data} options={options} />
             </div>
           </div>
+          <div class="d-flex justify-content-between mt-3 align-items-center">
+            <div>
+              {renderButton()}
+            </div>
+            <div className="d-flex align-items-center">
+              <div className="numero">
+                <span>{pulso}</span>
+              </div>
+              <div className="corazon w-25 y-25">
+                <span role="img" aria-label="Corazón latiendo">
+                  💓
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between row">
+                {showFinalReport()}
+              </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
