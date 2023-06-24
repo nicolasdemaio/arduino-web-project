@@ -27,9 +27,11 @@ Si lo que buscamos es poder observar el cliente web y servidor haremos:
 1. Clonamos repositorio de Github
 2. Nos paramos en la raíz del proyecto y ejecutamos en la terminal:
   ```
-  cd server && npm install
+  cd server
+  npm install
   cd ..
-  cd client && npm install
+  cd client
+  npm install
   ```
 Con estos comandos instalamos las dependencias y ejecutamos localmente los dos modulos del repositorio.
 Si nos dirijimos a ```localhost:3000``` veremos el gráfico y nuestro cliente se conectará al servidor mediante WebSocket por puerto 3001.
