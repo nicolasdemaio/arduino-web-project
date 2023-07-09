@@ -40,17 +40,21 @@ function App() {
   var maxTicksLimit = 30;
 
   useEffect(() => {
+    
     if (socket) {
       socket.on("heartRate", (data2) => {
-        setHeartRate(data2);
-        console.log(data2);
+        let valor = filteredValue(data2);
+        setHeartRate(valor);
+        console.log(valor);
 
-        heartRatesHistory.push(data2);
+        heartRatesHistory.push(valor);
         setHeartRatesHistory(heartRatesHistory);
         console.log("history: " + heartRatesHistory)
+
+        
         // Espera 1 seg, para que los graficos no sean rectos y sean diagonales??
         setTimeout(() => {
-          setPulso(data2);
+          setPulso(valor);
         }, "1000");
         if (maxTicksLimit <= heartRatesHistory.length) {
           setReadingState('finished')
@@ -63,6 +67,13 @@ function App() {
       };
     }
   }, [socket]);
+
+  const filteredValue = (data) => {
+    let value = data - 250;
+    const maxValue = 180;
+    const minValue = 0;
+    return (value > maxValue || value < minValue) ? 0 : value;
+  }
 
   const heartRateValue = () => {
     return heartRate;
