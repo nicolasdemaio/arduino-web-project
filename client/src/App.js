@@ -1,10 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Line } from "react-chartjs-2";
 import "chartjs-plugin-streaming";
 import "./styles.css";
 import moment from "moment";
 import "./App.css";
 import io from "socket.io-client";
+import AppNavbar from "./AppNavbar";
+import {
+  calculateAverage,
+  calculateMaxium,
+  calculateMinimum,
+} from "./MathUtils";
 
 const chartColors = {
   red: "rgb(255, 99, 132)",
@@ -34,31 +40,29 @@ const data = {
 function App() {
   const [socket, setSocket] = useState(null);
   const [heartRate, setHeartRate] = useState(null);
-  const [pulso, setPulso] = useState(null);
-  const [readingState, setReadingState] = useState('idle');
+  const [lastPulse, setLastPulse] = useState(null);
+  const [readingState, setReadingState] = useState("idle");
+  const [person, setPerson] = useState("");
+  const [ticksLimit, setTicksLimit] = useState(30);
   const [heartRatesHistory, setHeartRatesHistory] = useState([]);
-  var maxTicksLimit = 30;
 
   useEffect(() => {
-    
     if (socket) {
       socket.on("heartRate", (data2) => {
-        let valor = filteredValue(data2);
-        setHeartRate(valor);
-        console.log(valor);
+        let value = filteredValue(data2);
+        setHeartRate(value);
+        console.log(value);
 
-        heartRatesHistory.push(valor);
+        heartRatesHistory.push(value);
         setHeartRatesHistory(heartRatesHistory);
-        console.log("history: " + heartRatesHistory)
+        console.log("history: " + heartRatesHistory);
 
-        
         // Espera 1 seg, para que los graficos no sean rectos y sean diagonales??
         setTimeout(() => {
-          setPulso(valor);
+          setLastPulse(value);
         }, "1000");
-        if (maxTicksLimit <= heartRatesHistory.length) {
-          setReadingState('finished')
-          disconnectWebSocket();
+        if (ticksLimit <= heartRatesHistory.length) {
+          stopReading();
         }
       });
 
@@ -68,14 +72,34 @@ function App() {
     }
   }, [socket]);
 
+  const stopReading = () => {
+    setReadingState("finished");
+    saveResultsToHistory();
+    disconnectWebSocket();
+  };
+
   const filteredValue = (data) => {
     let value = data - 250;
     const maxValue = 180;
     const minValue = 0;
-    return (value > maxValue || value < minValue) ? 0 : value;
-  }
+    return value > maxValue || value < minValue ? 0 : value;
+  };
 
   const heartRateValue = () => {
+    // BORRAR TODO MENOS LA ULTIMA LINEA
+    // ES SOLO PARA PROBAR
+    if (ticksLimit <= heartRatesHistory.length) {
+      stopReading();
+    }
+    const min = 80;
+    const max = 120;
+    let randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+
+    heartRatesHistory.push(randomNumber);
+    setHeartRatesHistory(heartRatesHistory);
+    setHeartRate(randomNumber);
+
+    // DEJAR ESTO DE ABAJO!!!!
     return heartRate;
   };
 
@@ -111,7 +135,7 @@ function App() {
             maxRotation: 0,
             minRotation: 0,
             stepSize: 1,
-            maxTicksLimit: 30,
+            maxTicksLimit: ticksLimit,
             minUnit: "second",
             source: "auto",
             autoSkip: true,
@@ -131,16 +155,15 @@ function App() {
           },
         },
       ],
-
     },
     legend: {
       display: false, // Oculta la leyenda
     },
   };
 
-  const connectWebSocket = () => {
+  const startReading = () => {
     setHeartRate([]);
-    setReadingState('running');
+    setReadingState("running");
     const newSocket = io("http://localhost:3001");
     setSocket(newSocket);
   };
@@ -157,73 +180,112 @@ function App() {
       socket.disconnect();
       setSocket(null);
     }
-    setReadingState('idle')
+    setReadingState("idle");
     disconnectWebSocket();
     setHeartRatesHistory([]);
     setHeartRate(null);
-    setPulso(null);
-  };
-
-  const showFinalReport = () => {
-    if (readingState === 'finished') {
-      return <div>
-        <div class='row'>Pico mínimo: {heartRatesHistory.reduce((min, current) => Math.min(min, current))}</div>
-        <div class='row'>Pico máximo: {heartRatesHistory.reduce((min, current) => Math.max(min, current))}</div>
-        <div class='row'>Promedio: {heartRatesHistory.reduce((acc, curr) => acc + curr, 0) / heartRatesHistory.length}</div>
-      </div>
-    }
+    setLastPulse(null);
+    setPerson("");
   };
 
   const renderButton = () => {
-    if (socket && readingState === 'running') {
-      return <button
-        disabled={readingState === 'running'}
-        className="btn btn-secondary"
-        onClick={disconnectWebSocket}
-      >
-        ({maxTicksLimit - heartRatesHistory.length}) Leyendo ...
-      </button>;
-    } else if (readingState === 'finished') {
-      return <button
-        className="btn btn-dark shadow"
-        onClick={restartProgram}
-      >
-        Reiniciar
-      </button>;
+    if (socket && readingState === "running") {
+      return (
+        <button
+          disabled={readingState === "running"}
+          className="btn btn-secondary"
+          onClick={disconnectWebSocket}
+        >
+          ({ticksLimit - heartRatesHistory.length}) Leyendo ...
+        </button>
+      );
+    } else if (readingState === "finished") {
+      return (
+        <button className="btn btn-dark shadow" onClick={restartProgram}>
+          Reiniciar
+        </button>
+      );
     } else {
-      return <button
-        className="btn btn-primary shadow"
-        onClick={connectWebSocket}
-      >
-        Comenzar lectura
-      </button>;
+      return (
+        <div className="d-flex">
+          <input
+            type="text"
+            className="form-control m-1 w-50"
+            placeholder="Inserte nombre"
+            value={person}
+            onChange={(e) => setPerson(e.target.value)}
+          />
+          <input
+            type="number"
+            className="form-control m-1 w-25"
+            placeholder="Ticks"
+            value={ticksLimit}
+            onChange={(e) => setTicksLimit(e.target.value)}
+          />
+          <button
+            className="btn btn-primary shadow m-1"
+            disabled={!person || !ticksLimit || ticksLimit <= 0}
+            onClick={startReading}
+          >
+            Leer
+          </button>
+        </div>
+      );
     }
+  };
+
+  const saveResultsToHistory = () => {
+    let history = JSON.parse(localStorage.getItem("history"));
+    if (!history) {
+      history = [];
+    }
+    const newResult = {
+      person: person,
+      minimum: calculateMinimum(heartRatesHistory),
+      maximum: calculateMaxium(heartRatesHistory),
+      average: calculateAverage(heartRatesHistory),
+      timestamp: new Date().toLocaleString(),
+    };
+
+    history.unshift(newResult);
+    localStorage.setItem("history", JSON.stringify(history));
   };
 
   return (
     <>
-      <nav class="navbar bg-dark">
-        <div class="container-fluid">
-          <a class="navbar-brand" href="#">
-            <span style={{ color: 'white' }}>ReactCardio</span>
-          </a>
-        </div>
-      </nav>
+      <AppNavbar/>
       <div className="container App mt-4 w-75">
-        <h1 className="fw-bold">Sensor de ritmo cardiaco</h1>
-        <div className="row">
+        <div className="row g-3 d-flex">
           <div className="card p-3 col-12">
             <div className="heartRateGraphic">
               <Line data={data} options={options} />
             </div>
           </div>
-          <div class="d-flex justify-content-between mt-3 align-items-center">
-            <div>
-              {renderButton()}
-            </div>
-            <div className="d-flex align-items-center">
+          <div className="mt-3 small">
+            <table className="table table-bordered small m-0 p-0">
+              <thead>
+                <tr>
+                  <th scope="col">Minimo</th>
+                  <th scope="col">Maximo</th>
+                  <th scope="col">Promedio</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{calculateMinimum(heartRatesHistory)}</td>
+                  <td>{calculateMaxium(heartRatesHistory)}</td>
+                  <td>{calculateAverage(heartRatesHistory)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="row g-3 mt-1">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <div className="">{renderButton()}</div>
+            <div className="d-flex align-items-center ">
               <div className="numero">
-                <span>{pulso}</span>
+                <span>{lastPulse}</span>
               </div>
               <div className="corazon w-25 y-25">
                 <span role="img" aria-label="Corazón latiendo">
@@ -232,9 +294,6 @@ function App() {
               </div>
             </div>
           </div>
-          <div class="d-flex justify-content-between row">
-                {showFinalReport()}
-              </div>
         </div>
       </div>
     </>
