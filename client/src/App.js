@@ -86,20 +86,6 @@ function App() {
   };
 
   const heartRateValue = () => {
-    // BORRAR TODO MENOS LA ULTIMA LINEA
-    // ES SOLO PARA PROBAR
-    if (ticksLimit <= heartRatesHistory.length) {
-      stopReading();
-    }
-    const min = 80;
-    const max = 120;
-    let randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
-
-    heartRatesHistory.push(randomNumber);
-    setHeartRatesHistory(heartRatesHistory);
-    setHeartRate(randomNumber);
-
-    // DEJAR ESTO DE ABAJO!!!!
     return heartRate;
   };
 
@@ -123,8 +109,8 @@ function App() {
                 });
               }
             },
-            delay: 500,
-            refresh: 500,
+            delay: 1000,
+            refresh: 1000,
             time: {
               displayFormat: "h:mm",
             },
@@ -140,7 +126,7 @@ function App() {
             source: "auto",
             autoSkip: true,
             callback: function (value) {
-              return moment(value, "HH:mm:ss").format("H:mm:ss");
+              return moment(value, "HH:mm:ss").format("mm:ss");
             },
           },
         },
@@ -148,10 +134,10 @@ function App() {
       yAxes: [
         {
           ticks: {
-            stepSize: 5,
+            stepSize: 1,
             beginAtZero: false,
             min: 40,
-            max: 180,
+            max: 140,
           },
         },
       ],
