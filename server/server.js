@@ -28,7 +28,7 @@ let heartRateValue = 0;
 
 board.on('ready', function() {
   const heartRateSensor = new five.Sensor({
-    pin: 'A3', // Pin analógico al que está conectado el sensor
+    pin: 'A0', // Pin analógico al que está conectado el sensor
     freq: 250, // Frecuencia de lectura en milisegundos
   });
 
